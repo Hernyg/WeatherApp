@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Roboto, sans-serif;
+            --accent: #0077ff;
+            --bg: color-mix(in srgb, Canvas 60%, #dbeafe 40%);
+            --card-bg: color-mix(in srgb, var(--bg) 70%, #ffffff 30%);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem 1rem 4rem;
+        }
+
+        .dashboard {
+            width: min(900px, 100%);
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 30px 70px rgba(15, 23, 42, 0.15);
+            padding: 2rem;
+            backdrop-filter: blur(6px);
+        }
+
+        header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+        }
+
+        form {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input[type="search"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 0.75rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            background: rgba(255, 255, 255, 0.7);
+            color: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="search"]:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 999px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.35);
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .weather-summary {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.65);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.12);
+            display: grid;
+            gap: 1rem;
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(15, 23, 42, 0.7);
+        }
+
+        .temperature {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 600;
+        }
+
+        .meta {
+            font-size: 0.95rem;
+            color: rgba(15, 23, 42, 0.7);
+            line-height: 1.5;
+        }
+
+        .hourly-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        .hourly-item {
+            padding: 1rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.55);
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+            text-align: center;
+        }
+
+        .hourly-time {
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .message {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: rgba(15, 23, 42, 0.75);
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>Weather Dashboard</h1>
+            <form id="search-form">
+                <input type="search" id="city-input" placeholder="Search for a city" aria-label="City name" required>
+                <button type="submit">Get Weather</button>
+            </form>
+        </header>
+
+        <p id="status" class="message" role="status" aria-live="polite"></p>
+
+        <section class="weather-summary" aria-live="polite">
+            <article class="card" id="current-card" hidden>
+                <h2>Current Conditions</h2>
+                <div class="temperature" id="current-temp"></div>
+                <div class="meta" id="current-details"></div>
+            </article>
+
+            <article class="card" id="location-card" hidden>
+                <h2>Location</h2>
+                <div class="meta" id="location-details"></div>
+            </article>
+
+            <article class="card" id="hourly-card" hidden>
+                <h2>Next Hours</h2>
+                <div class="hourly-list" id="hourly-list"></div>
+            </article>
+        </section>
+    </div>
+
+    <script>
+        const form = document.querySelector('#search-form');
+        const input = document.querySelector('#city-input');
+        const status = document.querySelector('#status');
+        const currentCard = document.querySelector('#current-card');
+        const locationCard = document.querySelector('#location-card');
+        const hourlyCard = document.querySelector('#hourly-card');
+
+        const currentTemp = document.querySelector('#current-temp');
+        const currentDetails = document.querySelector('#current-details');
+        const locationDetails = document.querySelector('#location-details');
+        const hourlyList = document.querySelector('#hourly-list');
+
+        const formatTime = (isoString) => {
+            const date = new Date(isoString);
+            return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        };
+
+        const showStatus = (message, type = 'info') => {
+            status.textContent = message;
+            status.className = `message show ${type}`;
+        };
+
+        const hideStatus = () => {
+            status.className = 'message';
+            status.textContent = '';
+        };
+
+        const renderWeather = (city, location, weather) => {
+            const { current_weather, hourly } = weather;
+
+            currentTemp.textContent = `${Math.round(current_weather.temperature)}°C`;
+            currentDetails.innerHTML = `
+                <div><strong>Feels like:</strong> ${Math.round(hourly.apparent_temperature[0])}°C</div>
+                <div><strong>Wind:</strong> ${Math.round(current_weather.windspeed)} km/h</div>
+                <div><strong>Condition:</strong> ${current_weather.weathercode_text}</div>
+                <div><strong>Updated:</strong> ${formatTime(current_weather.time)}</div>
+            `;
+
+            locationDetails.innerHTML = `
+                <div><strong>City:</strong> ${city.name}${city.admin1 ? `, ${city.admin1}` : ''}</div>
+                <div><strong>Country:</strong> ${city.country}</div>
+                <div><strong>Latitude:</strong> ${location.latitude.toFixed(2)}°</div>
+                <div><strong>Longitude:</strong> ${location.longitude.toFixed(2)}°</div>
+                <div><strong>Elevation:</strong> ${location.elevation} m</div>
+                <div><strong>Timezone:</strong> ${location.timezone}</div>
+            `;
+
+            hourlyList.innerHTML = hourly.time.slice(0, 6).map((time, index) => `
+                <div class="hourly-item">
+                    <div class="hourly-time">${formatTime(time)}</div>
+                    <div>${Math.round(hourly.temperature_2m[index])}°C</div>
+                    <div>${Math.round(hourly.apparent_temperature[index])}°C feels like</div>
+                </div>
+            `).join('');
+
+            currentCard.hidden = false;
+            locationCard.hidden = false;
+            hourlyCard.hidden = false;
+        };
+
+        const getWeatherCodeDescription = (code) => {
+            const codes = {
+                0: 'Clear sky',
+                1: 'Mainly clear',
+                2: 'Partly cloudy',
+                3: 'Overcast',
+                45: 'Fog',
+                48: 'Depositing rime fog',
+                51: 'Light drizzle',
+                53: 'Moderate drizzle',
+                55: 'Dense drizzle',
+                56: 'Light freezing drizzle',
+                57: 'Dense freezing drizzle',
+                61: 'Slight rain',
+                63: 'Moderate rain',
+                65: 'Heavy rain',
+                66: 'Light freezing rain',
+                67: 'Heavy freezing rain',
+                71: 'Slight snow fall',
+                73: 'Moderate snow fall',
+                75: 'Heavy snow fall',
+                77: 'Snow grains',
+                80: 'Slight rain showers',
+                81: 'Moderate rain showers',
+                82: 'Violent rain showers',
+                85: 'Slight snow showers',
+                86: 'Heavy snow showers',
+                95: 'Thunderstorm',
+                96: 'Thunderstorm with slight hail',
+                99: 'Thunderstorm with heavy hail'
+            };
+            return codes[code] ?? 'Unknown conditions';
+        };
+
+        const fetchWeather = async (cityName) => {
+            showStatus(`Looking up weather for "${cityName}"…`);
+
+            try {
+                const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`);
+                if (!geoResponse.ok) throw new Error('Unable to reach geocoding service');
+                const geoData = await geoResponse.json();
+                const city = geoData.results?.[0];
+                if (!city) {
+                    showStatus('No matching locations found. Try another city.', 'error');
+                    return;
+                }
+
+                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.latitude}&longitude=${city.longitude}&current_weather=true&hourly=temperature_2m,apparent_temperature&forecast_days=1`);
+                if (!weatherResponse.ok) throw new Error('Unable to reach weather service');
+                const weatherData = await weatherResponse.json();
+
+                weatherData.current_weather.weathercode_text = getWeatherCodeDescription(weatherData.current_weather.weathercode);
+                renderWeather(city, weatherData, weatherData);
+                showStatus(`Showing weather for ${city.name}, ${city.country}.`, 'success');
+            } catch (error) {
+                console.error(error);
+                showStatus('Something went wrong while fetching the weather. Please try again later.', 'error');
+            } finally {
+                form.querySelector('button').disabled = false;
+            }
+        };
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const city = input.value.trim();
+            if (!city) return;
+            form.querySelector('button').disabled = true;
+            fetchWeather(city);
+        });
+
+        // Load a default city when the dashboard opens
+        fetchWeather('New York');
+    </script>
+</body>
+</html>
